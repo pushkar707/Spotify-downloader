@@ -13,6 +13,7 @@ from selenium import webdriver
 import time
 from concurrent.futures import ThreadPoolExecutor, as_completed
 import threading
+from django.conf import settings
 
 
 load_dotenv()
@@ -65,7 +66,8 @@ def download_video(item,playlist_name):
         # Downloading song
         ydl_opts = {
             'format': 'bestaudio/best',
-            'outtmpl': str(Path.home() / "Downloads" / playlist_name / name),
+            "outtmpl": os.path.join(settings.MEDIA_ROOT, playlist_name, name),
+            # 'outtmpl': str(Path.home() / "Downloads" / playlist_name / name),
             'postprocessors': [{
                 'key': 'FFmpegExtractAudio',
                 'preferredcodec': 'mp3',
@@ -98,8 +100,14 @@ def download_songs_long():
         # download_video(i,playlist_name)
         for task in as_completed(threads):
             print(task.result())
-
     download_completed.set()
+
+def download_brrowser(file_path):
+    pass
+    # with open(file_path, 'rb') as mp3_file:
+    #     response = HttpResponse(mp3_file.read(), content_type='audio/mpeg')
+    #     response['Content-Disposition'] = f'attachment; filename="{os.path.basename(file_path)}"'
+    #     return response
 
 # Create your views here.
 def home(request):
