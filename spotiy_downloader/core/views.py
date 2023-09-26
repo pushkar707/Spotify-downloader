@@ -1,4 +1,4 @@
-from django.shortcuts import HttpResponse,redirect
+from django.shortcuts import HttpResponse,redirect,render
 from django.http import JsonResponse
 from dotenv import load_dotenv
 import os
@@ -17,6 +17,8 @@ import threading
 
 load_dotenv()
 
+download_completed = threading.Event()
+daemon_process_started = False
 
 def get_token():
     client_id = os.getenv('SPOTIPY_CLIENT_ID')
@@ -43,7 +45,7 @@ def get_video_link(name,artist):
         url = f"https://www.youtube.com/results?search_query={name} {artist}"
         # driver.minimize_window()
         driver.get(url)
-        time.sleep(10)
+        time.sleep(5.5)
         content = driver.page_source.encode('utf-8').strip()
         soup = BeautifulSoup(content,"html.parser")
         firstVid = soup.select_one('ytd-video-renderer a.yt-simple-endpoint.inline-block.style-scope.ytd-thumbnail')
@@ -79,31 +81,43 @@ def download_video(item,playlist_name):
 
 def download_songs_long():
     token = get_token()
-    playlist = requests.get("https://api.spotify.com/v1/playlists/2axSMVEIguykFjXHzRRHsZ", headers={
+    playlist = requests.get("https://api.spotify.com/v1/playlists/2c9zGFsDI1KPdZAOgIOfor", headers={
         "Authorization": "Bearer " + token
     })
     playlist_name = json.loads(playlist.content)['name']
-    tracks = requests.get("https://api.spotify.com/v1/playlists/2axSMVEIguykFjXHzRRHsZ/tracks", headers={
+    tracks = requests.get("https://api.spotify.com/v1/playlists/2c9zGFsDI1KPdZAOgIOfor/tracks", headers={
         "Authorization": "Bearer " + token
     })
     json_result = json.loads(tracks.content)
 
     # threding:
     threads = []
-    with ThreadPoolExecutor(max_workers=20) as executor:
+    with ThreadPoolExecutor(max_workers=5) as executor:
         for i in (json_result['items']):
             threads.append(executor.submit(download_video, i,playlist_name))
         # download_video(i,playlist_name)
         for task in as_completed(threads):
             print(task.result())
 
+    download_completed.set()
+
 # Create your views here.
 def home(request):
-    t = threading.Thread(target=download_songs_long)
-    t.setDaemon(True)
-    t.start()
-    return HttpResponse("Pending")
+    global daemon_process_started
+
+    if not daemon_process_started:
+        daemon_process_started = True
+        t = threading.Thread(target=download_songs_long)
+        t.setDaemon(True)
+        t.start()
+    return render(request, 'home.html', {'download_completed': download_completed.is_set()})
+    # return HttpResponse("Pending")
 
 def completed(request):
+    global daemon_process_started
+    download_completed.clear()
+    daemon_process_started = False
     return HttpResponse("Playlist downloaded")
     
+def check_download_status(request):
+    return JsonResponse({'completed': download_completed.is_set(),"rfdvv":'fxvc'})

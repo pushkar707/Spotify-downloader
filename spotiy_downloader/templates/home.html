@@ -1,0 +1,25 @@
+<!-- home.html -->
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Home</title>
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+</head>
+<body>
+    <div id="status">
+        PENDING
+    </div>
+    <script>
+        function checkStatus() {
+            $.getJSON('/check_download_status/', function(data) {
+                if (data.completed) {
+                    window.location.href = '/completed/';
+                }
+            });
+        }
+
+        // Check the status every 2 seconds (adjust as needed)
+        setInterval(checkStatus, 2000);
+    </script>
+</body>
+</html>

@@ -16,11 +16,12 @@ Including another URLconf
 """
 from django.contrib import admin
 from django.urls import path
-from core.views import home,completed
+from core.views import home,completed,check_download_status
 
 urlpatterns = [
     path('', home),
     path('completed/', completed),
+    path('check_download_status/', check_download_status),
     # path('redirect', redirect),
     path('admin/', admin.site.urls),
 ]
