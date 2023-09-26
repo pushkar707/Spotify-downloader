@@ -14,6 +14,7 @@ import time
 from concurrent.futures import ThreadPoolExecutor, as_completed
 import threading
 from django.conf import settings
+import zipfile
 
 
 load_dotenv()
@@ -83,11 +84,11 @@ def download_video(item,playlist_name):
 
 def download_songs_long():
     token = get_token()
-    playlist = requests.get("https://api.spotify.com/v1/playlists/2c9zGFsDI1KPdZAOgIOfor", headers={
+    playlist = requests.get("https://api.spotify.com/v1/playlists/5BVYvnNOkwQCuyZoSZOO1e", headers={
         "Authorization": "Bearer " + token
     })
-    playlist_name = json.loads(playlist.content)['name']
-    tracks = requests.get("https://api.spotify.com/v1/playlists/2c9zGFsDI1KPdZAOgIOfor/tracks", headers={
+    playlist_name = json.loads(playlist.content)['name'].replace(" ","-")
+    tracks = requests.get("https://api.spotify.com/v1/playlists/5BVYvnNOkwQCuyZoSZOO1e/tracks", headers={
         "Authorization": "Bearer " + token
     })
     json_result = json.loads(tracks.content)
@@ -125,7 +126,29 @@ def completed(request):
     global daemon_process_started
     download_completed.clear()
     daemon_process_started = False
-    return HttpResponse("Playlist downloaded")
+    return HttpResponse("Zip file is ready <br> <a href='/download-folder/app-testing/'>Download Folder as Zip</a>")
+
+def download_folder_as_zip(request, folder_name):
+    folder_path = os.path.join(settings.MEDIA_ROOT, folder_name)
+
+    if os.path.exists(folder_path):
+        # Create a zip file
+        zip_file_path = os.path.join(settings.MEDIA_ROOT, f'{folder_name}.zip')
+        with zipfile.ZipFile(zip_file_path, 'w', zipfile.ZIP_DEFLATED) as zipf:
+            for root, _, files in os.walk(folder_path):
+                for file in files:
+                    file_path = os.path.join(root, file)
+                    rel_path = os.path.relpath(file_path, folder_path)
+                    zipf.write(file_path, rel_path)
+
+        # Serve the zip file as a response
+        with open(zip_file_path, 'rb') as zip_file:
+            response = HttpResponse(zip_file.read(), content_type='application/zip')
+            response['Content-Disposition'] = f'attachment; filename={folder_name}.zip'
+            return response
+    else:
+        # Handle the case where the folder doesn't exist
+        return HttpResponse("Folder not found", status=404)
     
 def check_download_status(request):
     return JsonResponse({'completed': download_completed.is_set(),"rfdvv":'fxvc'})
