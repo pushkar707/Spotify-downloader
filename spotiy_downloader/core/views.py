@@ -47,7 +47,7 @@ def get_video_link(name,artist):
         url = f"https://www.youtube.com/results?search_query={name} {artist}"
         # driver.minimize_window()
         driver.get(url)
-        time.sleep(5.5)
+        time.sleep(4)
         content = driver.page_source.encode('utf-8').strip()
         soup = BeautifulSoup(content,"html.parser")
         firstVid = soup.select_one('ytd-video-renderer a.yt-simple-endpoint.inline-block.style-scope.ytd-thumbnail')
@@ -88,19 +88,8 @@ def download_video(item,playlist_name,request):
 
 
 def download_songs_long(playlist_name,tracks,request):
-    # token = get_token()
-    # playlist = requests.get("https://api.spotify.com/v1/playlists/5BVYvnNOkwQCuyZoSZOO1e", headers={
-    #     "Authorization": "Bearer " + token
-    # })
-    # playlist_name = json.loads(playlist.content)['name'].replace(" ","-")
-    # tracks = requests.get("https://api.spotify.com/v1/playlists/5BVYvnNOkwQCuyZoSZOO1e/tracks", headers={
-    #     "Authorization": "Bearer " + token
-    # })
-    # json_result = json.loads(tracks.content)
-
-    # threding:
     threads = []
-    with ThreadPoolExecutor(max_workers=5) as executor:
+    with ThreadPoolExecutor(max_workers=8) as executor:
         # for i in (json_result['items']):
         for i in tracks:
             print(i)
@@ -123,9 +112,13 @@ def homee(request):
     # return HttpResponse("Pending")
 
 def completed(request):
-    global daemon_process_started
+    playlist = request.session.get('playlist')
+    path = os.path.join(settings.MEDIA_ROOT, playlist)
+    # if (not path){
+
+    # }
     download_completed.clear()
-    daemon_process_started = False
+    request.session['daemon_process_started'] = False
     return HttpResponse("Zip file is ready <br> <a href='/download-folder/app-testing/'>Download Folder as Zip</a>")
 
 def download_folder_as_zip(request, folder_name):
@@ -156,7 +149,7 @@ def check_download_status(request):
 # rearranged templates
 def home(request):
     if(request.method == "GET"):
-        return render(request,"homee.html")
+        return render(request,"homee.html",{"test":'test'})
     else:
         link = request.POST.get("link")
         playlist_id = link.split("?")[0].split("/")[-1]
@@ -168,7 +161,7 @@ def home(request):
         })
 
         playlist_name = json.loads(playlist.content)['name']
-        tracks = requests.get("https://api.spotify.com/v1/playlists/5BVYvnNOkwQCuyZoSZOO1e/tracks", headers={
+        tracks = requests.get(f"https://api.spotify.com/v1/playlists/{playlist_id}/tracks", headers={
             "Authorization": "Bearer " + token
         })
         json_result = json.loads(tracks.content)
@@ -179,24 +172,32 @@ def home(request):
             artist = item['track']['album']['artists'][0]['name']
             tracks.append({'name':name,'artist':artist,'image':image})
 
-        request.session['playlist'] = playlist_name
+        request.session['playlist'] = playlist_name.replace(" ",'-')
         request.session['tracks'] = tracks
         return render(request,'search_results.html',{'playlist_name':playlist_name,'tracks':tracks})
     
 def zip_route(request):
-    if (not request.session.get('tracks')):
+    tracks = request.session.get("tracks")
+    if (not tracks):
         return redirect("/")
     daemon_process_started = request.session.get("daemon_process_started")
 
     if not daemon_process_started:
         request.session['daemon_process_started'] = True
-        playlist = request.session.get("playlist").replace(" ",'-')
-        tracks = request.session.get("tracks")
+        playlist = request.session.get("playlist")
         t = threading.Thread(target=download_songs_long,args=(playlist,tracks,request))
         t.setDaemon(True)
         t.start()
-    return render(request, 'processing.html', {'download_completed': download_completed.is_set()})
+    return render(request, 'processing.html', {'download_completed': download_completed.is_set(),"total_songs":len(tracks)})
 
 def check_songs_dowloaded(request):
-    if (not request.session.get('tracks')):
+    playlist = request.session.get("playlist")
+    tracks = request.session.get("tracks")
+    if (not playlist):
         return redirect("/")
+    file_list = os.listdir(os.path.join(settings.MEDIA_ROOT, playlist))
+    mp3_files = [file_name for file_name in file_list if file_name.endswith('.mp3')]
+    len_mp3 = len(mp3_files)
+    progress = (len_mp3/len(tracks))*100
+    return JsonResponse({'progress':progress,"completed":len_mp3})
+    

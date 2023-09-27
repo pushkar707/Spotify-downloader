@@ -1,9 +1,12 @@
 <!-- Here, user will be show a progress bar of creating a zip file and after completion automatically redirected -->
+{% extends "base.html" %}
+{% block content %}
 <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
 <style>
     #progress-container {
         width: 100%;
         background-color: #ccc;
+        overflow: hidden;
     }
 
     #progress-bar {
@@ -13,8 +16,8 @@
         transition: width 0.3s;
     }
 </style>
-<div id="status">
-    PENDING
+<div id="status" class="mb-2">
+    Generating Zip File...
 </div>
 
 <div id="progress-container">
@@ -36,14 +39,20 @@
     function updateProgressBar() {
         // Make an AJAX request to the backend to get progress information
         // Replace this with your actual backend endpoint
-        fetch('/check-files-downloaded')
+        fetch('/check-songs-downloaded')
             .then(response => response.json())
             .then(data => {
                 const progressBar = document.getElementById('progress-bar');
                 progressBar.style.width = data.progress + '%';
+
+                const completed = data.completed
+                if(completed){
+                    document.getElementById("status").innerText = `Added ${completed} songs of {{total_songs}} to the Zip file`
+                }
             });
     }
 
     // Poll the backend for progress updates every second
-    setInterval(updateProgressBar, 1000);
+    setInterval(updateProgressBar, 2000)
 </script>
+{% endblock %}
