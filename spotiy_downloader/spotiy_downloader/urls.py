@@ -16,10 +16,11 @@ Including another URLconf
 """
 from django.contrib import admin
 from django.urls import path
-from core.views import home,completed,check_download_status,download_folder_as_zip
+from core.views import home,completed,check_download_status,download_folder_as_zip,zip_route
 
 urlpatterns = [
     path('', home),
+    path('processing/', zip_route),
     path('completed/', completed),
     path('check_download_status/', check_download_status),
     path('download-folder/<str:folder_name>/', download_folder_as_zip),

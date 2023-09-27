@@ -1,0 +1,49 @@
+<!-- Here, user will be show a progress bar of creating a zip file and after completion automatically redirected -->
+<script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+<style>
+    #progress-container {
+        width: 100%;
+        background-color: #ccc;
+    }
+
+    #progress-bar {
+        width: 0;
+        height: 30px;
+        background-color: #007bff;
+        transition: width 0.3s;
+    }
+</style>
+<div id="status">
+    PENDING
+</div>
+
+<div id="progress-container">
+    <div id="progress-bar"></div>
+</div>
+<script>
+    function checkStatus() {
+        $.getJSON('/check_download_status/', function(data) {
+            if (data.completed) {
+                window.location.href = '/completed/';
+            }
+        });
+    }
+
+    // Check the status every 2 seconds (adjust as needed)
+    setInterval(checkStatus, 2000);
+
+    // Progress Bar
+    function updateProgressBar() {
+        // Make an AJAX request to the backend to get progress information
+        // Replace this with your actual backend endpoint
+        fetch('/check-files-downloaded')
+            .then(response => response.json())
+            .then(data => {
+                const progressBar = document.getElementById('progress-bar');
+                progressBar.style.width = data.progress + '%';
+            });
+    }
+
+    // Poll the backend for progress updates every second
+    setInterval(updateProgressBar, 1000);
+</script>

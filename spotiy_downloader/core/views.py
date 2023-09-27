@@ -56,12 +56,15 @@ def get_video_link(name,artist):
     except Exception:
         print("Failed to fetch link")
 
-def download_video(item,playlist_name):
+def download_video(item,playlist_name,request):
     # Getting song's link
     try:
-        name = item['track']['name']
-        image = item['track']['album']['images'][0]['url']
-        artist = item['track']['album']['artists'][0]['name']
+        name = item['name']
+        image = item['image']
+        artist = item['artist']
+        # name = item['track']['name']
+        # image = item['track']['album']['images'][0]['url']
+        # artist = item['track']['album']['artists'][0]['name']
         link = get_video_link(name,artist)
 
         # Downloading song
@@ -80,38 +83,35 @@ def download_video(item,playlist_name):
                 ydl.download("https://www.youtube.com" + link)
     except requests.exceptions.RequestException as e:
        print(e)
+       request.session['daemon_process_started'] = False
+       return e
 
 
-def download_songs_long():
-    token = get_token()
-    playlist = requests.get("https://api.spotify.com/v1/playlists/5BVYvnNOkwQCuyZoSZOO1e", headers={
-        "Authorization": "Bearer " + token
-    })
-    playlist_name = json.loads(playlist.content)['name'].replace(" ","-")
-    tracks = requests.get("https://api.spotify.com/v1/playlists/5BVYvnNOkwQCuyZoSZOO1e/tracks", headers={
-        "Authorization": "Bearer " + token
-    })
-    json_result = json.loads(tracks.content)
+def download_songs_long(playlist_name,tracks,request):
+    # token = get_token()
+    # playlist = requests.get("https://api.spotify.com/v1/playlists/5BVYvnNOkwQCuyZoSZOO1e", headers={
+    #     "Authorization": "Bearer " + token
+    # })
+    # playlist_name = json.loads(playlist.content)['name'].replace(" ","-")
+    # tracks = requests.get("https://api.spotify.com/v1/playlists/5BVYvnNOkwQCuyZoSZOO1e/tracks", headers={
+    #     "Authorization": "Bearer " + token
+    # })
+    # json_result = json.loads(tracks.content)
 
     # threding:
     threads = []
     with ThreadPoolExecutor(max_workers=5) as executor:
-        for i in (json_result['items']):
-            threads.append(executor.submit(download_video, i,playlist_name))
+        # for i in (json_result['items']):
+        for i in tracks:
+            print(i)
+            threads.append(executor.submit(download_video, i,playlist_name,request))
         # download_video(i,playlist_name)
         for task in as_completed(threads):
             print(task.result())
-    download_completed.set()
-
-def download_brrowser(file_path):
-    pass
-    # with open(file_path, 'rb') as mp3_file:
-    #     response = HttpResponse(mp3_file.read(), content_type='audio/mpeg')
-    #     response['Content-Disposition'] = f'attachment; filename="{os.path.basename(file_path)}"'
-    #     return response
+    download_completed.set()     
 
 # Create your views here.
-def home(request):
+def homee(request):
     global daemon_process_started
 
     if not daemon_process_started:
@@ -133,7 +133,7 @@ def download_folder_as_zip(request, folder_name):
 
     if os.path.exists(folder_path):
         # Create a zip file
-        zip_file_path = os.path.join(settings.MEDIA_ROOT, f'{folder_name}.zip')
+        zip_file_path = os.path.join(settings.MEDIA_ROOT, folder_name, f'{folder_name}.zip')
         with zipfile.ZipFile(zip_file_path, 'w', zipfile.ZIP_DEFLATED) as zipf:
             for root, _, files in os.walk(folder_path):
                 for file in files:
@@ -151,4 +151,52 @@ def download_folder_as_zip(request, folder_name):
         return HttpResponse("Folder not found", status=404)
     
 def check_download_status(request):
-    return JsonResponse({'completed': download_completed.is_set(),"rfdvv":'fxvc'})
+    return JsonResponse({'completed': download_completed.is_set()})
+
+# rearranged templates
+def home(request):
+    if(request.method == "GET"):
+        return render(request,"homee.html")
+    else:
+        link = request.POST.get("link")
+        playlist_id = link.split("?")[0].split("/")[-1]
+
+        # Getting playlist from spotify API
+        token = get_token()
+        playlist = requests.get(f"https://api.spotify.com/v1/playlists/{playlist_id}", headers={
+            "Authorization": "Bearer " + token
+        })
+
+        playlist_name = json.loads(playlist.content)['name']
+        tracks = requests.get("https://api.spotify.com/v1/playlists/5BVYvnNOkwQCuyZoSZOO1e/tracks", headers={
+            "Authorization": "Bearer " + token
+        })
+        json_result = json.loads(tracks.content)
+        tracks = []
+        for item in json_result['items']:
+            name = item['track']['name']
+            image = item['track']['album']['images'][2]['url']
+            artist = item['track']['album']['artists'][0]['name']
+            tracks.append({'name':name,'artist':artist,'image':image})
+
+        request.session['playlist'] = playlist_name
+        request.session['tracks'] = tracks
+        return render(request,'search_results.html',{'playlist_name':playlist_name,'tracks':tracks})
+    
+def zip_route(request):
+    if (not request.session.get('tracks')):
+        return redirect("/")
+    daemon_process_started = request.session.get("daemon_process_started")
+
+    if not daemon_process_started:
+        request.session['daemon_process_started'] = True
+        playlist = request.session.get("playlist").replace(" ",'-')
+        tracks = request.session.get("tracks")
+        t = threading.Thread(target=download_songs_long,args=(playlist,tracks,request))
+        t.setDaemon(True)
+        t.start()
+    return render(request, 'processing.html', {'download_completed': download_completed.is_set()})
+
+def check_songs_dowloaded(request):
+    if (not request.session.get('tracks')):
+        return redirect("/")

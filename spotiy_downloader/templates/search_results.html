@@ -1,0 +1,28 @@
+<!-- Here user will be displayed playlist he/she searched foor along with a link/button to create zip file -->
+{% extends "base.html" %}
+{% block content %}
+<h2 class="text-center">{{playlist_name}}</h2>
+
+<table class="table mt-4">
+    <thead>
+        <tr>
+          <th scope="col">#</th>
+          <th scope="col">Name</th>
+          <th scope="col">Artist</th>
+          <th>Image</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for track in tracks %}
+        <tr>
+          <th scope="row">1</th>
+          <td>{{track.name}}</td>
+          <td>{{track.artist}}</td>
+          <td><img src="{{track.image}}" alt="" width="32" height="32"></td>
+        </tr>
+        {% endfor %}
+      </tbody>
+</table>
+
+<a class="btn btn-success my-4" href="/processing">Generate Zip File</a>
+{% endblock %}
