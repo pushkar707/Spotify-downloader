@@ -1,7 +1,7 @@
 <!-- HERE USER WILL ENTER PLAYLIST LINK AND POST REQUEST WILL BE SENT -->
 {% extends "base.html" %}
 {% block content %}
-<form class="d-block w-75 m-auto d-flex px-5" method="POST" action="/">
+<form class="d-block w-75 m-auto d-flex px-5" method="POST" action="/" style="min-width: 700px;">
     {% csrf_token %}
     <input type="text" class="form-control mx-1" name="link" placeholder="Enter Spotify Playlist URL">
     <button class="btn btn-success mx-1">Find</button>

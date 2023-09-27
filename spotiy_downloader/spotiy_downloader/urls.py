@@ -16,15 +16,16 @@ Including another URLconf
 """
 from django.contrib import admin
 from django.urls import path
-from core.views import home,completed,check_download_status,download_folder_as_zip,zip_route,check_songs_dowloaded
+from core.views import home,completed,download_folder_as_zip,zip_route,check_songs_dowloaded,reset,check_mp3_files
 
 urlpatterns = [
     path('', home),
     path('processing/', zip_route),
     path('completed/', completed),
-    path('check_download_status/', check_download_status),
     path('download-folder/<str:folder_name>/', download_folder_as_zip),
     path('check-songs-downloaded/', check_songs_dowloaded),
+    path('reset/', reset),
+    path('check-mp3-files/', check_mp3_files),
     # path('redirect', redirect),
     path('admin/', admin.site.urls),
 ]

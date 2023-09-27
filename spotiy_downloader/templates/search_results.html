@@ -15,7 +15,7 @@
       <tbody>
         {% for track in tracks %}
         <tr>
-          <th scope="row">1</th>
+          <th scope="row">{{ forloop.counter }}</th>
           <td>{{track.name}}</td>
           <td>{{track.artist}}</td>
           <td><img src="{{track.image}}" alt="" width="32" height="32"></td>
