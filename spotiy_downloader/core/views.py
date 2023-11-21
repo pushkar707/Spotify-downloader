@@ -116,24 +116,24 @@ def home(request):
             playlist = requests.get(f"https://api.spotify.com/v1/playlists/{playlist_id}", headers={
                 "Authorization": "Bearer " + token
             })
-
-            playlist_name = json.loads(playlist.content)['name']
-            tracks = requests.get(f"https://api.spotify.com/v1/playlists/{playlist_id}/tracks", headers={
-                "Authorization": "Bearer " + token
-            })
-            json_result = json.loads(tracks.content)
+            content = json.loads(playlist.content)
+            playlist_name = content['name']
+            tracks = content['tracks']
+            total_tracks = content['tracks']['total']
+            
         except KeyError:
             return HttpResponse("Could not find your playlist. Maybe it is private. Go back <a href='/'>Home</a>")
-        tracks = []
-        for item in json_result['items']:
+        # return JsonResponse(json.loads(playlist.content)['tracks'])
+        my_tracks = []
+        for item in tracks['items']:
             name = item['track']['name']
             image = item['track']['album']['images'][2]['url']
             artist = item['track']['album']['artists'][0]['name']
-            tracks.append({'name':name,'artist':artist,'image':image})
+            my_tracks.append({'name':name,'artist':artist,'image':image})
         request.session['playlist_original'] = playlist_name
         request.session['playlist'] = playlist_name.replace(" ",'-')+playlist_id
-        request.session['tracks'] = tracks
-        return render(request,'search_results.html',{'playlist_name':playlist_name,'tracks':tracks})
+        request.session['tracks'] = my_tracks
+        return render(request,'search_results.html',{'playlist_name':playlist_name,'tracks':my_tracks,"total":total_tracks})
     
 def zip_route(request):
     tracks = request.session.get("tracks")
